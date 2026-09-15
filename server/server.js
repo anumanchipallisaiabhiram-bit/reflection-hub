@@ -13,23 +13,52 @@ const app = express();
 connectDB();
 
 // CORS Configuration
-const allowedOrigins = process.env.CLIENT_URL
-  ? [process.env.CLIENT_URL, "http://localhost:5173", "http://localhost:3000"]
-  : "*";
+const allowedOrigins = [
+  "https://reflection-hub-rouge.vercel.app",
+  "http://localhost:5173",
+  "http://localhost:3000",
+  process.env.CLIENT_URL,
+].filter(Boolean);
 
-app.use(
-  cors({
-    origin: allowedOrigins,
-    credentials: true,
-  })
-);
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow non-browser requests (e.g. Postman, curl, server-to-server)
+    if (!origin) return callback(null, true);
+
+    const isExplicitlyAllowed = allowedOrigins.includes(origin);
+    const isVercelDomain = origin.endsWith(".vercel.app");
+
+    if (isExplicitlyAllowed || isVercelDomain) {
+      return callback(null, true);
+    }
+
+    // Default fallback to allow reflecting origin in response
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: [
+    "Origin",
+    "X-Requested-With",
+    "Content-Type",
+    "Accept",
+    "Authorization",
+  ],
+  optionsSuccessStatus: 200,
+};
+
+// Enable CORS for all incoming requests including preflight OPTIONS
+app.use(cors(corsOptions));
 
 // Middleware
 app.use(express.json());
 
-// Routes
+// Routes (supporting both /api/... and root-level aliases for resilience)
 app.use("/api/auth", authRoutes);
+app.use("/auth", authRoutes);
+
 app.use("/api/journals", journalRoutes);
+app.use("/journals", journalRoutes);
 
 // Home Route
 app.get("/", (req, res) => {
