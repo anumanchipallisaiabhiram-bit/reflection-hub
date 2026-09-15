@@ -50,6 +50,14 @@ const corsOptions = {
 // Enable CORS for all incoming requests including preflight OPTIONS
 app.use(cors(corsOptions));
 
+// Explicit fast handler for preflight OPTIONS requests
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+  next();
+});
+
 // Middleware
 app.use(express.json());
 
